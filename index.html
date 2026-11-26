@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maintenance Office CMMS — Local Prototype</title>
+  <meta
+    name="description"
+    content="Maintenance Office CMMS web application for equipment register, work orders, preventive maintenance schedules, spare parts inventory, role-based access, audit log, and Excel CSV export."
+  />
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 36'%3E%3Crect width='36' height='36' rx='9' fill='%231d4ed8'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700' font-size='15'%3EMO%3C/text%3E%3C/svg%3E"
+  />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Initial Hydration Loading State -->
+  <div id="loading-overlay" class="loading-overlay" role="status" aria-live="polite">
+    <div class="spinner" aria-hidden="true"></div>
+    <div class="loading-label">Loading Maintenance Office workspace...</div>
+  </div>
+
+  <!-- Local Prototype Role Login Gate -->
+  <main id="login-view" class="login-view hidden" aria-label="Sign in">
+    <div class="login-container">
+      <header class="login-header">
+        <div class="login-brand">
+          <span class="brand-mark" aria-hidden="true">MO</span>
+          <div>
+            <h1>Maintenance Office CMMS</h1>
+            <p>Phase 1 Local Prototype — Equipment, Work Orders, PM Schedules &amp; Spare Parts</p>
+          </div>
+        </div>
+      </header>
+      <div class="login-body">
+        <p class="login-section-title">Select Role to Sign In</p>
+        <div id="login-error" class="form-error-box hidden" role="alert" style="margin-bottom: 14px;"></div>
+
+        <div class="role-cards">
+          <section class="role-card" aria-labelledby="role-admin-heading">
+            <div>
+              <div class="role-card-top">
+                <div>
+                  <h2 id="role-admin-heading">Admin</h2>
+                  <p class="role-card-subtitle">Maintenance Manager</p>
+                </div>
+                <span class="badge badge-info">Full Access</span>
+              </div>
+              <p class="role-card-desc" style="margin-top: 10px;">
+                Manage plant assets, work orders, PM schedules, minimum stock thresholds, and demo reset.
+              </p>
+              <ul class="role-card-perms" style="margin-top: 8px;">
+                <li>Create, edit, and delete records</li>
+                <li>Edit spare-part minimum stock thresholds</li>
+                <li>Export CSV &amp; view read-only audit log</li>
+              </ul>
+              <div class="login-name-row">
+                <label for="admin-name-input" class="sr-only">Admin display name</label>
+                <input id="admin-name-input" type="text" value="Elena Vance" placeholder="Admin name" />
+              </div>
+            </div>
+            <button id="login-admin-btn" type="button" class="btn btn-primary" style="width: 100%;">
+              Sign In as Admin
+            </button>
+          </section>
+
+          <section class="role-card" aria-labelledby="role-tech-heading">
+            <div>
+              <div class="role-card-top">
+                <div>
+                  <h2 id="role-tech-heading">Technician</h2>
+                  <p class="role-card-subtitle">Field Technician</p>
+                </div>
+                <span class="badge badge-success">Shop Floor</span>
+              </div>
+              <p class="role-card-desc" style="margin-top: 10px;">
+                Log faults, update work orders, consume spare parts, and complete recurring PM tasks.
+              </p>
+              <ul class="role-card-perms" style="margin-top: 8px;">
+                <li>Create &amp; update work orders and PM completions</li>
+                <li><strong>Restricted:</strong> cannot delete records</li>
+                <li><strong>Restricted:</strong> cannot edit min-stock thresholds</li>
+              </ul>
+              <div class="login-name-row">
+                <label for="tech-name-input" class="sr-only">Technician display name</label>
+                <input id="tech-name-input" type="text" value="Marcus Cole" placeholder="Technician name" />
+              </div>
+            </div>
+            <button id="login-tech-btn" type="button" class="btn btn-secondary" style="width: 100%;">
+              Sign In as Technician
+            </button>
+          </section>
+        </div>
+
+        <div class="login-custom-bar">
+          <span>Data is stored locally in your browser (<span class="mono">localStorage</span>). No external server or API keys required.</span>
+          <span>Safety: Audit log is read-only; purchase requests are draft-only.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Main Authenticated Application Shell -->
+  <div id="app-shell" class="app-shell hidden">
+    <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+    <aside id="sidebar" class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-left">
+          <span class="brand-mark" aria-hidden="true">MO</span>
+          <div>
+            <span class="sidebar-brand-title">Maintenance Office</span>
+            <span class="sidebar-brand-sub">CMMS · Local Prototype</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Sections">
+        <div class="nav-group-label">Operations</div>
+        <button id="nav-overview" type="button" class="nav-item active" data-view="overview">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+            </svg>
+            Overview
+          </span>
+        </button>
+
+        <button id="nav-equipment" type="button" class="nav-item" data-view="equipment">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Equipment
+          </span>
+          <span id="badge-equipment" class="nav-badge">0</span>
+        </button>
+
+        <button id="nav-workorders" type="button" class="nav-item" data-view="workorders">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+              <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+              <line x1="9" y1="12" x2="15" y2="12"></line>
+              <line x1="9" y1="16" x2="13" y2="16"></line>
+            </svg>
+            Work Orders
+          </span>
+          <span id="badge-workorders" class="nav-badge">0</span>
+        </button>
+
+        <button id="nav-pm" type="button" class="nav-item" data-view="pm">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            PM Schedule
+          </span>
+          <span id="badge-pm" class="nav-badge">0</span>
+        </button>
+
+        <div class="nav-group-label">Inventory &amp; Governance</div>
+
+        <button id="nav-parts" type="button" class="nav-item" data-view="parts">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+            Spare Parts
+          </span>
+          <span id="badge-parts" class="nav-badge">0</span>
+        </button>
+
+        <button id="nav-audit" type="button" class="nav-item" data-view="audit">
+          <span class="nav-item-label">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            Audit Log
+          </span>
+          <span id="badge-audit" class="nav-badge">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-chip">
+          <span id="sidebar-user-name" class="user-chip-name">—</span>
+          <span id="sidebar-user-role" class="user-chip-role">—</span>
+        </div>
+        <div class="sidebar-footer-actions">
+          <button id="reset-demo-btn" type="button" class="sidebar-btn hidden" title="Restore sample plant data">
+            Reset Demo
+          </button>
+          <button id="logout-btn" type="button" class="sidebar-btn">
+            Switch / Sign Out
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-column">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="mobile-menu-btn" type="button" class="mobile-menu-btn" aria-label="Open navigation menu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <h1 id="topbar-title" class="page-title">Overview</h1>
+        </div>
+        <div class="topbar-right">
+          <span id="topbar-role-pill" class="role-banner-pill"></span>
+          <div id="topbar-actions" class="panel-actions"></div>
+        </div>
+      </header>
+
+      <main id="view-container" class="content-area" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <!-- Reusable Modal Shell -->
+  <div id="modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="modal-title" class="modal-title">Modal</h2>
+        <button id="modal-close-btn" type="button" class="modal-close" aria-label="Close modal">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-footer" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Region -->
+  <div id="toast-region" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- Modular Vanilla JS (works over HTTP and file:// without build tools) -->
+  <script defer src="js/seed.js"></script>
+  <script defer src="js/csv.js"></script>
+  <script defer src="js/store.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/app.js"></script>
+</body>
+</html>
